@@ -1,44 +1,81 @@
 const body = document.body;
-const urlParam = window.location.search.substring(1);
-const login = (urlParam.split(('='))[1]);
-let url = 'https://api.github.com/users/VeronikaWells';
-if (login) {
-  url = `https://api.github.com/users/${login}`;
-}
+const url = window.location.toString();
+let requestFromPromise;
 
-fetch(url)
-  .then(response => {
-    if (response.status !== 404) {
-      return response.json();
-    } else {
-      let err = new Error(response.statusText + ' ' + response.status);
-      err.response = response;
-      throw err;
+document.body.onload = function() {
+
+  setTimeout(function() {
+    let preloader = document.getElementById('preloader');
+
+    if (!preloader.classList.contains('done')) {
+    	preloader.classList.add('done');
     }
-  })
+  }, 2000)
 
+};
+
+const getUsernameFromUrl = (url) => {
+  let splitOfUrl = url.split('=');
+  let stringOfUsername  = splitOfUrl[1];
+  if (stringOfUsername == undefined) {
+    stringOfUsername = 'VeronikaWells';
+  }
+  return stringOfUsername;
+};
+
+const getDate = new Promise((resolve, reject) =>
+  setTimeout(() => new Date ? resolve(new Date) : reject(new Error('Время неизвестно')), 2000)
+);
+
+const getRequest = fetch(`https://api.github.com/users/${getUsernameFromUrl(url)}`);
+
+Promise.all([getRequest, getDate])
+  .then(([request, nowDate]) => {
+    requestFromPromise = request;
+    date = nowDate;
+  })
+  .then(res => requestFromPromise.json())
   .then(json => {
-    let ava = new Image();
-    ava.src = json.avatar_url;
-    body.append(ava);
+    avatarOfUser = json.avatar_url;
+    bioOfUser = json.bio;
+    urlOfUser = json.url;
+    const login = json.name;
+    const link = json.html_url;
 
-    let link = document.createElement('a');
-    link.href = json.html_url;
-    link.style.display = "block";
-    if (json.name) {
-      link.innerHTML = json.name;
-    } else {
-      link.innerHTML = 'Информация о пользователе недоступна';
+    const addUser = () => {
+      const user = document.createElement('h1');
+      user.innerHTML = `${getUsernameFromUrl(url)}`;
+      body.appendChild(user);
     }
-    body.appendChild(link);
-
-    let bio = document.createElement('p');
-    if (json.bio) {
-      bio.innerHTML = json.bio;
-    } else {
-      bio.innerHTML = 'Пользователь не заполнил данное поле';
+    const addBio = () => {
+      const bio = document.createElement('h3');
+      if (json.bio) {
+        bio.innerHTML = json.bio;
+      } else {
+        bio.innerHTML = 'Пользователь не заполнил данное поле';
+      };
+      body.appendChild(bio);
     }
-    body.append(bio);
-  })
+    const addImg = () => {
+      const img = document.createElement('img');
+      let newString = document.createElement('br');
+      img.src = this.avatarOfUser;
+      body.appendChild(img);
+      body.appendChild(newString);
+    }
 
-  .catch(error => document.body.innerHTML = `Пользователь не найден.<br> ${error}`);
+    const userName = document.createElement('a'); 
+      userName.innerHTML = login; 
+      userName.setAttribute('href', link);
+      body.appendChild(userName);
+
+    const dateAdd = document.createElement('p');
+      dateAdd.innerHTML = date;
+      body.appendChild(dateAdd); 
+
+    addUser();
+    addBio();
+    addImg();
+})
+
+.catch(err => document.body.innerHTML = 'Информация о пользователе не доступна');
